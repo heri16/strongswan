@@ -86,6 +86,20 @@ execute "debootstrap --arch=$BASEIMGARCH --include=$INC $BASEIMGSUITE $LOOPDIR $
 execute "mount -t proc none $LOOPDIR/proc" 0
 do_on_exit graceful_umount $LOOPDIR/proc
 
+if [ -n "$BACKPORT" ]
+then
+	log_action "Enabling $BASEIMGSUITE-backports repo"
+	cat > $LOOPDIR/etc/apt/sources.list.d/backports.list << EOF
+deb $BASEIMGMIRROR $BASEIMGSUITE-backports main
+EOF
+	log_status $?
+
+	log_action "Update package sources"
+	execute_chroot "apt-get update"
+	log_action "Install packages from $BASEIMGSUITE-backports"
+	execute_chroot "apt-get -y --no-install-recommends -t $BASEIMGSUITE-backports install $BACKPORT"
+fi
+
 for service in $SERVICES
 do
 	log_action "Disabling service $service"
